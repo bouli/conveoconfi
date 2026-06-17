@@ -1,62 +1,33 @@
 # conveoconfi
 
-Reusable YAML template-backed configuration helpers for projects that used to
-carry their own `core.config_files` module.
+Reusable YAML template-backed configuration helpers for Python applications.
 
-`conveoconfi` keeps the legacy function-based API while moving the shared
-convention-over-configuration behavior into one dependency:
+`conveoconfi` provides a small function-based API for convention-over-
+configuration behavior:
 
 - create missing application config directories
-- create missing YAML config files from project-owned default templates
+- create missing YAML config files from application-owned default templates
 - complete existing YAML files with newly added defaults
 - preserve existing user-provided values and extra keys
 - read child parameters from `config.yaml`
 
 ## Installation
 
-Install the package in the consuming project, or declare it in that project's
-dependency metadata.
+Install the package with pip, or declare it in your project's dependency
+metadata.
 
 ```bash
 pip install conveoconfi
 ```
 
-For a local migration before publishing, point your dependency manager at this
-repository path. For example:
-
-```toml
-[project]
-dependencies = [
-    "conveoconfi @ file:///absolute/path/to/conveoconfi",
-]
-```
-
-`conveoconfi` declares `PyYAML` as a runtime dependency, so consumers do not need
-to add a separate YAML dependency for this compatibility layer.
-
-## Migration
-
-Replace imports from the project-local module with imports from the shared
-package.
-
-```python
-# Before
-from cheapchocolate.core.config_files import create_and_read_config_file, get_param
-
-# After
-from conveoconfi import create_and_read_config_file, get_param
-```
-
-The same pattern applies to projects such as `ohmyscrapper` and `aphantasist`:
-replace `from <project>.core.config_files import ...` with
-`from conveoconfi import ...`, then delete the duplicated local
-`config_files.py` after tests pass.
+`conveoconfi` declares `PyYAML` as a runtime dependency, so applications do not
+need to add a separate YAML dependency for these helpers.
 
 ## Default Templates
 
-Consuming projects keep their own YAML default templates, such as
-`config.yaml`, `mail_folders.yaml`, `url_types.yaml`, or `url_sniffing.yaml`.
-Pass that template directory explicitly when reading or completing config files.
+Applications keep their own YAML default templates, such as `config.yaml`,
+`logging.yaml`, or `feature_flags.yaml`. Pass that template directory explicitly
+when reading or completing config files.
 
 ```python
 from pathlib import Path
@@ -64,7 +35,7 @@ from pathlib import Path
 from conveoconfi import create_and_read_config_file
 
 
-APP_DIR = Path.home() / ".cheapchocolate"
+APP_DIR = Path.home() / ".myapp"
 DEFAULT_FILES_DIR = Path(__file__).parent / "default_files"
 
 config = create_and_read_config_file(
@@ -83,24 +54,19 @@ that names the lookup problem.
 
 ## Template Discovery Decision
 
-The public API requires consuming projects to pass their template directory
+The public API requires applications to pass their template directory
 explicitly with `default_files_dir` or `default_template_dir`. `conveoconfi`
 does not search for templates in its own package directory because those files
-belong to the consuming application, not to this reusable dependency. A package
-local `default_files` directory would only contain `conveoconfi` files and could
-not reliably represent `cheapchocolate`, `ohmyscrapper`, `aphantasist`, or any
-other application's defaults.
+belong to the consuming application, not to this reusable dependency.
 
-An automatic compatibility helper that infers defaults from the caller package
-was considered for migration ergonomics. The first stable API keeps discovery
-explicit instead: it is predictable in tests, works with any project layout, and
-fails with a direct `FileNotFoundError` when templates are not configured.
-Projects that want a shorter call site can wrap `conveoconfi` once in their own
-code and bind the app's template path there.
+Explicit template paths keep behavior predictable in tests, work with any
+project layout, and fail with a direct `FileNotFoundError` when templates are
+not configured. Projects that want a shorter call site can wrap `conveoconfi`
+once in their own code and bind the app's template path there.
 
 ## Public API
 
-The compatibility API exposes these legacy function names from the package root:
+The public API exposes these function names from the package root:
 
 - `create_and_read_config_file(file_name, default_app_dir, force_default=False, complete_file=True, default_files_dir=None, default_template_dir=None)`
 - `complete_config_file(file_name, default_app_dir, default_files_dir=None, default_template_dir=None)`
@@ -111,8 +77,7 @@ The compatibility API exposes these legacy function names from the package root:
 - `config_file_path(file_name, default_app_dir)`
 
 `config_file_path` creates the application config directory before returning the
-path. `get_param` reads from `config.yaml`, matching the old project-local
-helpers.
+path. `get_param` reads from `config.yaml`.
 
 ## Completion Behavior
 
@@ -122,19 +87,19 @@ Completion is recursive for dictionaries:
 
 ```yaml
 # Existing user config
-mails:
-  remote_read_state:
+notifications:
+  email:
     enabled: false
 
 # Default template
-mails:
-  remote_read_state:
+notifications:
+  email:
     enabled: true
-    unseen_folder: unseen
+    sender: hello@example.com
 ```
 
 The completed file keeps the user's `enabled: false` value and adds only the
-missing `unseen_folder` value. User-defined extra keys are preserved. If a
+missing `sender` value. User-defined extra keys are preserved. If a
 current value and default value disagree on shape, such as a scalar versus a
 dictionary, the current user value is preserved.
 
