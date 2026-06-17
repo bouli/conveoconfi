@@ -65,6 +65,23 @@ def _read_default_template(
     return data
 
 
+def _complete_config_data(current_data: Any, default_data: Any) -> Any:
+    if not isinstance(current_data, dict) or not isinstance(default_data, dict):
+        return current_data
+
+    completed_data = dict(current_data)
+    for key, default_value in default_data.items():
+        if key not in completed_data:
+            completed_data[key] = default_value
+            continue
+
+        current_value = completed_data[key]
+        if isinstance(current_value, dict) and isinstance(default_value, dict):
+            completed_data[key] = _complete_config_data(current_value, default_value)
+
+    return completed_data
+
+
 def create_and_read_config_file(
     file_name: str,
     default_app_dir: str | Path,
@@ -74,8 +91,6 @@ def create_and_read_config_file(
     default_template_dir: str | Path | None = None,
 ):
     """Create a missing config file from a YAML template and return parsed data."""
-    del complete_file
-
     path = config_file_path(file_name, default_app_dir)
     if force_default or not path.exists():
         data = _read_default_template(
@@ -94,11 +109,39 @@ def create_and_read_config_file(
             default_template_dir=default_template_dir,
         )
         _write_yaml_file(path, data)
+    elif complete_file:
+        data = complete_config_file(
+            file_name,
+            default_app_dir,
+            default_files_dir=default_files_dir,
+            default_template_dir=default_template_dir,
+        )
     return data
 
 
-def complete_config_file(*args, **kwargs):
-    _not_implemented("complete_config_file")
+def complete_config_file(
+    file_name: str,
+    default_app_dir: str | Path,
+    default_files_dir: str | Path | None = None,
+    default_template_dir: str | Path | None = None,
+):
+    """Complete a config file with missing values from its default template."""
+    path = config_file_path(file_name, default_app_dir)
+    data = _read_yaml_file(path)
+    default_data = _read_default_template(
+        file_name,
+        default_files_dir=default_files_dir,
+        default_template_dir=default_template_dir,
+    )
+
+    if data is None:
+        _write_yaml_file(path, default_data)
+        return default_data
+
+    completed_data = _complete_config_data(data, default_data)
+    if completed_data != data:
+        _write_yaml_file(path, completed_data)
+    return completed_data
 
 
 def overwrite_config_file(*args, **kwargs):
