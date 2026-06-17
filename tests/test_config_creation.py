@@ -2,9 +2,12 @@ import pytest
 import yaml
 
 from conveoconfi import (
+    append_config_file,
     complete_config_file,
+    config_file_exists,
     config_file_path,
     create_and_read_config_file,
+    overwrite_config_file,
 )
 
 
@@ -21,6 +24,48 @@ def test_config_file_path_creates_missing_app_directory(tmp_path):
 
     assert path == app_dir / "config.yaml"
     assert app_dir.is_dir()
+
+
+def test_config_file_exists_reports_file_presence(tmp_path):
+    app_dir = tmp_path / "app"
+
+    assert config_file_exists("config.yaml", app_dir) is False
+
+    _write_yaml(app_dir / "config.yaml", {"enabled": True})
+
+    assert config_file_exists("config.yaml", app_dir) is True
+
+
+def test_overwrite_config_file_writes_readable_yaml(tmp_path):
+    app_dir = tmp_path / "app"
+
+    overwrite_config_file(
+        "config.yaml",
+        app_dir,
+        {"section": {"enabled": True}, "workers": 2},
+    )
+
+    assert yaml.safe_load((app_dir / "config.yaml").read_text(encoding="utf-8")) == {
+        "section": {"enabled": True},
+        "workers": 2,
+    }
+
+
+def test_append_config_file_appends_and_normalizes_yaml(tmp_path):
+    app_dir = tmp_path / "app"
+    _write_yaml(app_dir / "config.yaml", {"enabled": False, "workers": 1})
+
+    data = append_config_file(
+        "config.yaml",
+        app_dir,
+        {"workers": 2, "name": "São Paulo"},
+    )
+
+    assert data == {"enabled": False, "workers": 2, "name": "São Paulo"}
+    config_text = (app_dir / "config.yaml").read_text(encoding="utf-8")
+    assert config_text.count("workers:") == 1
+    assert "São Paulo" in config_text
+    assert yaml.safe_load(config_text) == data
 
 
 def test_create_and_read_config_file_creates_missing_file_from_template(tmp_path):

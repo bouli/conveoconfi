@@ -144,20 +144,28 @@ def complete_config_file(
     return completed_data
 
 
-def overwrite_config_file(*args, **kwargs):
-    _not_implemented("overwrite_config_file")
+def overwrite_config_file(file_name: str, default_app_dir: str | Path, data: Any) -> None:
+    """Overwrite a config file with YAML data."""
+    _write_yaml_file(config_file_path(file_name, default_app_dir), data)
 
 
-def append_config_file(*args, **kwargs):
-    _not_implemented("append_config_file")
+def append_config_file(file_name: str, default_app_dir: str | Path, data: Any) -> Any:
+    """Append YAML data to a config file, then rewrite normalized YAML."""
+    path = config_file_path(file_name, default_app_dir)
+    with path.open("a", encoding="utf-8") as file:
+        yaml.safe_dump(data, file, sort_keys=False, allow_unicode=True)
+
+    normalized_data = _read_yaml_file(path)
+    _write_yaml_file(path, normalized_data)
+    return normalized_data
 
 
 def get_param(*args, **kwargs):
     _not_implemented("get_param")
 
 
-def config_file_exists(*args, **kwargs):
-    _not_implemented("config_file_exists")
+def config_file_exists(file_name: str, default_app_dir: str | Path) -> bool:
+    return config_file_path(file_name, default_app_dir).is_file()
 
 
 def config_file_path(file_name: str, default_app_dir: str | Path) -> Path:
