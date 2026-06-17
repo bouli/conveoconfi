@@ -160,8 +160,26 @@ def append_config_file(file_name: str, default_app_dir: str | Path, data: Any) -
     return normalized_data
 
 
-def get_param(*args, **kwargs):
-    _not_implemented("get_param")
+def get_param(
+    parent_param: str,
+    param: str,
+    default_app_dir: str | Path,
+    default_files_dir: str | Path | None = None,
+    default_template_dir: str | Path | None = None,
+):
+    """Read a child parameter from the root config.yaml file."""
+    data = create_and_read_config_file(
+        "config.yaml",
+        default_app_dir,
+        default_files_dir=default_files_dir,
+        default_template_dir=default_template_dir,
+    )
+    try:
+        return data[parent_param][param]
+    except (KeyError, TypeError):
+        raise Exception(
+            f"Parameter {param!r} was not found in {parent_param!r}"
+        ) from None
 
 
 def config_file_exists(file_name: str, default_app_dir: str | Path) -> bool:

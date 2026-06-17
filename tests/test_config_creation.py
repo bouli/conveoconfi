@@ -7,6 +7,7 @@ from conveoconfi import (
     config_file_exists,
     config_file_path,
     create_and_read_config_file,
+    get_param,
     overwrite_config_file,
 )
 
@@ -233,5 +234,68 @@ def test_create_and_read_config_file_reports_missing_template_path(tmp_path):
         create_and_read_config_file(
             "config.yaml",
             tmp_path / "app",
+            default_files_dir=default_files_dir,
+        )
+
+
+def test_get_param_reads_child_value_from_config_yaml(tmp_path):
+    app_dir = tmp_path / "app"
+    default_files_dir = tmp_path / "defaults"
+    _write_yaml(
+        default_files_dir / "config.yaml",
+        {"default_dirs": {"downloads": "/tmp/downloads"}},
+    )
+
+    value = get_param(
+        "default_dirs",
+        "downloads",
+        app_dir,
+        default_files_dir=default_files_dir,
+    )
+
+    assert value == "/tmp/downloads"
+    assert yaml.safe_load((app_dir / "config.yaml").read_text(encoding="utf-8")) == {
+        "default_dirs": {"downloads": "/tmp/downloads"}
+    }
+
+
+def test_get_param_completes_config_yaml_before_reading(tmp_path):
+    app_dir = tmp_path / "app"
+    default_files_dir = tmp_path / "defaults"
+    _write_yaml(app_dir / "config.yaml", {"default_files": {"cache": "cache.db"}})
+    _write_yaml(
+        default_files_dir / "config.yaml",
+        {"default_files": {"cache": "cache.db", "state": "state.yaml"}},
+    )
+
+    value = get_param(
+        "default_files",
+        "state",
+        app_dir,
+        default_files_dir=default_files_dir,
+    )
+
+    assert value == "state.yaml"
+    assert yaml.safe_load((app_dir / "config.yaml").read_text(encoding="utf-8")) == {
+        "default_files": {"cache": "cache.db", "state": "state.yaml"}
+    }
+
+
+def test_get_param_raises_legacy_style_error_for_missing_child(tmp_path):
+    app_dir = tmp_path / "app"
+    default_files_dir = tmp_path / "defaults"
+    _write_yaml(
+        default_files_dir / "config.yaml",
+        {"default_dirs": {"downloads": "/tmp/downloads"}},
+    )
+
+    with pytest.raises(
+        Exception,
+        match="Parameter 'missing' was not found in 'default_dirs'",
+    ):
+        get_param(
+            "default_dirs",
+            "missing",
+            app_dir,
             default_files_dir=default_files_dir,
         )
