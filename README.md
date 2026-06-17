@@ -81,6 +81,23 @@ Template lookup failures are explicit. If a default directory is omitted, or the
 requested template file is missing, `conveoconfi` raises a `FileNotFoundError`
 that names the lookup problem.
 
+## Template Discovery Decision
+
+The public API requires consuming projects to pass their template directory
+explicitly with `default_files_dir` or `default_template_dir`. `conveoconfi`
+does not search for templates in its own package directory because those files
+belong to the consuming application, not to this reusable dependency. A package
+local `default_files` directory would only contain `conveoconfi` files and could
+not reliably represent `cheapchocolate`, `ohmyscrapper`, `aphantasist`, or any
+other application's defaults.
+
+An automatic compatibility helper that infers defaults from the caller package
+was considered for migration ergonomics. The first stable API keeps discovery
+explicit instead: it is predictable in tests, works with any project layout, and
+fails with a direct `FileNotFoundError` when templates are not configured.
+Projects that want a shorter call site can wrap `conveoconfi` once in their own
+code and bind the app's template path there.
+
 ## Public API
 
 The compatibility API exposes these legacy function names from the package root:

@@ -25,3 +25,22 @@ def test_readme_documents_migration_path():
 
     for snippet in required_snippets:
         assert snippet in text
+
+
+def test_readme_documents_template_discovery_decision():
+    text = README.read_text(encoding="utf-8")
+
+    required_snippets = [
+        "## Template Discovery Decision",
+        "pass their template directory",
+        "does not search for templates",
+        "its own package directory",
+        "caller package",
+        "discovery",
+        "explicit instead",
+        "shorter call site",
+        "wrap `conveoconfi` once",
+    ]
+
+    for snippet in required_snippets:
+        assert snippet in text
